@@ -9,30 +9,32 @@ st.set_page_config(
 )
 
 st.title("Kiwimbi Impact Dashboard")
-st.write("Monitoring the reach and impact of Kiwimbi programs")
 
+# Google Sheet CSV link
 sheet_url = "https://docs.google.com/spreadsheets/d/1PakVqihxdWAomNUEOUYtL_36HEFv8rQD/export?format=csv"
 
+# Load data
 df = pd.read_csv(sheet_url)
 
 # Clean column names
-df.columns = df.columns.str.strip().str.lower()
+df.columns = df.columns.str.strip()
 
-# Show columns (debug)
-st.write("Columns detected:", df.columns)
+# Show detected columns (important for debugging)
+st.write("Detected columns:", df.columns)
 
-# Rename columns to expected names
-df = df.rename(columns={
-    "date": "Date",
-    "program": "Program",
-    "participants": "Participants"
-})
+# Check required columns
+required_columns = ["Date", "Program", "Participants"]
 
-# Convert date safely
-if "Date" in df.columns:
-    df["Date"] = pd.to_datetime(df["Date"])
+missing = [col for col in required_columns if col not in df.columns]
 
-# KPI metrics
+if missing:
+    st.error(f"Missing columns in Google Sheet: {missing}")
+    st.stop()
+
+# Convert date
+df["Date"] = pd.to_datetime(df["Date"])
+
+# KPIs
 total_participants = df["Participants"].sum()
 total_sessions = len(df)
 programs = df["Program"].nunique()
@@ -45,7 +47,7 @@ col3.metric("Active Programs", programs)
 
 st.divider()
 
-# Program totals
+# Program participation
 program_counts = df.groupby("Program")["Participants"].sum().reset_index()
 
 fig1 = px.bar(
@@ -58,22 +60,20 @@ fig1 = px.bar(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# Trend
-if "Date" in df.columns:
+# Growth over time
+trend = df.groupby("Date")["Participants"].sum().reset_index()
 
-    trend = df.groupby("Date")["Participants"].sum().reset_index()
+fig2 = px.line(
+    trend,
+    x="Date",
+    y="Participants",
+    markers=True,
+    title="Participation Trend"
+)
 
-    fig2 = px.line(
-        trend,
-        x="Date",
-        y="Participants",
-        markers=True,
-        title="Participation Trend"
-    )
+st.plotly_chart(fig2, use_container_width=True)
 
-    st.plotly_chart(fig2, use_container_width=True)
-
-# Pie
+# Distribution
 fig3 = px.pie(
     program_counts,
     values="Participants",
@@ -83,5 +83,6 @@ fig3 = px.pie(
 
 st.plotly_chart(fig3, use_container_width=True)
 
+# Data table
 st.subheader("Program Data")
 st.dataframe(df)
