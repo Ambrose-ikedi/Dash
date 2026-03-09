@@ -2,10 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ----------------------------
-# PAGE SETTINGS
-# ----------------------------
-
 st.set_page_config(
     page_title="Kiwimbi Impact Dashboard",
     page_icon="📊",
@@ -13,27 +9,22 @@ st.set_page_config(
 )
 
 st.title("Kiwimbi Impact Dashboard")
-st.markdown("Monitoring the reach and impact of Kiwimbi programs")
+st.write("Monitoring the reach and impact of Kiwimbi programs")
 
-# ----------------------------
-# GOOGLE SHEET CSV LINK
-# ----------------------------
-
+# Google Sheet CSV link
 sheet_url = "https://docs.google.com/spreadsheets/d/1PakVqihxdWAomNUEOUYtL_36HEFv8rQD/export?format=csv"
 
-# ----------------------------
-# LOAD DATA
-# ----------------------------
-
+# Load data
 df = pd.read_csv(sheet_url)
 
-# Convert date column
-df["Date"] = pd.to_datetime(df["Date"])
+# Clean column names (removes spaces)
+df.columns = df.columns.str.strip()
 
-# ----------------------------
-# KPI CALCULATIONS
-# ----------------------------
+# Convert date if it exists
+if "Date" in df.columns:
+    df["Date"] = pd.to_datetime(df["Date"])
 
+# KPIs
 total_participants = df["Participants"].sum()
 total_sessions = df.shape[0]
 programs = df["Program"].nunique()
@@ -46,12 +37,7 @@ col3.metric("Active Programs", programs)
 
 st.divider()
 
-# ----------------------------
-# PROGRAM PARTICIPATION
-# ----------------------------
-
-st.subheader("Program Participation")
-
+# Program participation
 program_counts = df.groupby("Program")["Participants"].sum().reset_index()
 
 fig1 = px.bar(
@@ -64,43 +50,31 @@ fig1 = px.bar(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# ----------------------------
-# PARTICIPATION OVER TIME
-# ----------------------------
+# Growth trend
+if "Date" in df.columns:
 
-st.subheader("Growth Over Time")
+    trend = df.groupby("Date")["Participants"].sum().reset_index()
 
-trend = df.groupby("Date")["Participants"].sum().reset_index()
+    fig2 = px.line(
+        trend,
+        x="Date",
+        y="Participants",
+        markers=True,
+        title="Participation Trend"
+    )
 
-fig2 = px.line(
-    trend,
-    x="Date",
-    y="Participants",
-    markers=True,
-    title="Participation Trend"
-)
+    st.plotly_chart(fig2, use_container_width=True)
 
-st.plotly_chart(fig2, use_container_width=True)
-
-# ----------------------------
-# PROGRAM DISTRIBUTION
-# ----------------------------
-
-st.subheader("Program Distribution")
-
+# Pie chart
 fig3 = px.pie(
     program_counts,
     values="Participants",
     names="Program",
-    title="Program Share of Beneficiaries"
+    title="Program Distribution"
 )
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# ----------------------------
-# DATA TABLE
-# ----------------------------
-
+# Table
 st.subheader("Program Data")
-
 st.dataframe(df)
