@@ -9,8 +9,9 @@ st.set_page_config(
 )
 
 st.title("Kiwimbi Impact Dashboard")
+st.write("Monitoring reach and engagement across programs")
 
-# Google Sheet CSV link
+# Google Sheets CSV link
 sheet_url = "https://docs.google.com/spreadsheets/d/1PakVqihxdWAomNUEOUYtL_36HEFv8rQD/export?format=csv"
 
 # Load data
@@ -19,70 +20,70 @@ df = pd.read_csv(sheet_url)
 # Clean column names
 df.columns = df.columns.str.strip()
 
-# Show detected columns (important for debugging)
-st.write("Detected columns:", df.columns)
-
-# Check required columns
-required_columns = ["Date", "Program", "Participants"]
-
-missing = [col for col in required_columns if col not in df.columns]
-
-if missing:
-    st.error(f"Missing columns in Google Sheet: {missing}")
-    st.stop()
-
-# Convert date
-df["Date"] = pd.to_datetime(df["Date"])
-
 # KPIs
-total_participants = df["Participants"].sum()
-total_sessions = len(df)
-programs = df["Program"].nunique()
+total_attendance = df["Totals attandance"].sum()
+total_meals = df["Meals Served"].sum()
+total_books = df["Books Borrowed"].sum()
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Total Beneficiaries (Reach)", total_participants)
-col2.metric("Total Sessions (Engagement)", total_sessions)
-col3.metric("Active Programs", programs)
+col1.metric("Total Attendance", total_attendance)
+col2.metric("Meals Served", total_meals)
+col3.metric("Books Borrowed", total_books)
 
 st.divider()
 
-# Program participation
-program_counts = df.groupby("Program")["Participants"].sum().reset_index()
+# Attendance trend
+st.subheader("Monthly Attendance Trend")
 
-fig1 = px.bar(
-    program_counts,
-    x="Program",
-    y="Participants",
-    color="Program",
-    title="Participants by Program"
+fig1 = px.line(
+    df,
+    x="Month",
+    y="Totals attandance",
+    markers=True
 )
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# Growth over time
-trend = df.groupby("Date")["Participants"].sum().reset_index()
+# Program participation comparison
+st.subheader("Program Participation")
 
-fig2 = px.line(
-    trend,
-    x="Date",
+program_data = df[[
+    "Month",
+    "Library Attendance",
+    "Mentorship Attendance",
+    "STEM Participants",
+    "Arts Participants",
+    "Sports Participants"
+]]
+
+program_data = program_data.melt(
+    id_vars="Month",
+    var_name="Program",
+    value_name="Participants"
+)
+
+fig2 = px.bar(
+    program_data,
+    x="Month",
     y="Participants",
-    markers=True,
-    title="Participation Trend"
+    color="Program",
+    barmode="group"
 )
 
 st.plotly_chart(fig2, use_container_width=True)
 
-# Distribution
-fig3 = px.pie(
-    program_counts,
-    values="Participants",
-    names="Program",
-    title="Program Distribution"
+# Meals trend
+st.subheader("Meals Served per Month")
+
+fig3 = px.bar(
+    df,
+    x="Month",
+    y="Meals Served"
 )
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# Data table
-st.subheader("Program Data")
+# Table
+st.subheader("Dataset")
 st.dataframe(df)
