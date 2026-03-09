@@ -11,22 +11,30 @@ st.set_page_config(
 st.title("Kiwimbi Impact Dashboard")
 st.write("Monitoring the reach and impact of Kiwimbi programs")
 
-# Google Sheet CSV link
 sheet_url = "https://docs.google.com/spreadsheets/d/1PakVqihxdWAomNUEOUYtL_36HEFv8rQD/export?format=csv"
 
-# Load data
 df = pd.read_csv(sheet_url)
 
-# Clean column names (removes spaces)
-df.columns = df.columns.str.strip()
+# Clean column names
+df.columns = df.columns.str.strip().str.lower()
 
-# Convert date if it exists
+# Show columns (debug)
+st.write("Columns detected:", df.columns)
+
+# Rename columns to expected names
+df = df.rename(columns={
+    "date": "Date",
+    "program": "Program",
+    "participants": "Participants"
+})
+
+# Convert date safely
 if "Date" in df.columns:
     df["Date"] = pd.to_datetime(df["Date"])
 
-# KPIs
+# KPI metrics
 total_participants = df["Participants"].sum()
-total_sessions = df.shape[0]
+total_sessions = len(df)
 programs = df["Program"].nunique()
 
 col1, col2, col3 = st.columns(3)
@@ -37,7 +45,7 @@ col3.metric("Active Programs", programs)
 
 st.divider()
 
-# Program participation
+# Program totals
 program_counts = df.groupby("Program")["Participants"].sum().reset_index()
 
 fig1 = px.bar(
@@ -50,7 +58,7 @@ fig1 = px.bar(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# Growth trend
+# Trend
 if "Date" in df.columns:
 
     trend = df.groupby("Date")["Participants"].sum().reset_index()
@@ -65,7 +73,7 @@ if "Date" in df.columns:
 
     st.plotly_chart(fig2, use_container_width=True)
 
-# Pie chart
+# Pie
 fig3 = px.pie(
     program_counts,
     values="Participants",
@@ -75,6 +83,5 @@ fig3 = px.pie(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# Table
 st.subheader("Program Data")
 st.dataframe(df)
